@@ -117,6 +117,11 @@ pub fn GenericReader(
     return struct {
         context: Context,
 
+        const has_stream_until_delimiter = std.meta.trait.hasFn("streamUntilDelimiter")(switch (@typeInfo(Context)) {
+            .Pointer => |ptr| ptr.child,
+            else => Context,
+        });
+
         pub const Error = ReadError;
         pub const NoEofError = ReadError || error{
             EndOfStream,
@@ -228,6 +233,10 @@ pub fn GenericReader(
             delimiter: u8,
             optional_max_size: ?usize,
         ) (NoEofError || error{StreamTooLong} || @TypeOf(writer).Error)!void {
+            if (comptime has_stream_until_delimiter) {
+                return self.context.streamUntilDelimiter(writer, delimiter, optional_max_size);
+            }
+
             return @errorCast(self.any().streamUntilDelimiter(
                 writer,
                 delimiter,
